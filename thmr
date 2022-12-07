@@ -1,0 +1,239 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o pipefail
+
+THEME_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export THEME_DIR
+
+COMMAND=""
+THEME=""
+VERBOSE=0
+THEME_FILE="$THEME_DIR/themes.yml"
+THEME_JSON=$(yq . "$THEME_FILE")
+THEME_SEL_CACHE="$HOME/.cache/thmr-sel"
+
+info() {
+  echo -e " \033[96m--> \033[97m$*\033[39m"
+}
+
+warn() {
+  echo -e ''
+}
+
+trace() {
+  if [[ "$VERBOSE" == "1" ]]; then
+    echo -e "\\033[93mtrace: \\033[97m$*\\033[39m"
+  fi
+}
+
+die() {
+  [ "$1" ] && {
+    echo -e "$1" 2>&1
+    exit 1
+  }
+  cat > /dev/stdout <<EOF
+$(basename "${0}") [ options ] <command>
+  Load and organize system themes
+
+  options:
+  -h | --help             Show this help dialog
+  -v | --verbose
+
+  command:
+  s | select <theme>   Select and load a theme. Passing no args will bring up a fzf selector.
+  l | list             List available themes.
+  r | reload           Reload the last selected theme.
+  a | random           Reload the last selected theme.
+  e | edit             Edit the theme.yml file using $EDITOR
+
+Author: Colin Gabrielson <colin.gabrielson@gmail.com>
+EOF
+}
+
+check_installed() {
+  pkg="${1:?}"
+  type "$pkg" >/dev/null 2>&1 || die "Missing required package '$pkg'"
+}
+
+check_installed yq
+check_installed jq
+check_installed fzf
+check_installed killall
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      die
+      ;;
+    -v|--verbose)
+      VERBOSE="1"
+      ;;
+    s|sel)
+      COMMAND="select"
+      if [ -n "$2" ]; then
+        THEME="$2"
+        shift
+      fi
+      ;;
+    l|list)
+      COMMAND="list"
+      ;;
+    r|reload)
+      COMMAND="reload"
+      ;;
+    a|random)
+      COMMAND="random"
+      ;;
+    e|edit)
+      COMMAND="edit"
+      ;;
+    *)
+      die "Invalid argument: $1"
+      ;;
+  esac
+  shift
+done
+
+deref_font() {
+  :
+}
+
+deref_color() {
+  local ref
+  ref="${1:?}"
+
+  eval color='$'"color$ref"
+  echo "$color" | tr '[:lower:]' '[:upper:]'
+}
+
+deref() {
+  local ref ref_type ref_value
+  ref="${1:?}"
+  ref_type=$(awk -F ':' '{print $1}' <<< "$ref")
+  ref_value=$(awk -F ':' '{print $2}' <<< "$ref")
+
+  case "$ref_type" in
+    c|color)
+      deref_color "$ref_value"
+      ;;
+    f|font)
+      deref_font "$ref_value"
+      ;;
+    *)
+      die "Unknown ref type: $ref_type"
+      ;;
+  esac
+}
+
+load_colors() {
+  local xfile sfile config
+  config="${1:?}"
+
+  eval xfile=$(jq -r '.colors' <<< "$config")
+  sfile="/tmp/thmr-colors-$(basename "$xfile")"
+  sed '/^!/d' "$xfile" \
+    | sed 's/*//g' \
+    | sed "s/: /='/g" \
+    | sed '/^$/d' \
+    | sed "s/.*/&'/" \
+    | sed 's/ //g' \
+    | sed 's/\.//g' \
+    > "$sfile"
+  trace "Loading colors from file $sfile"
+  source "$sfile"
+}
+
+load_modules() {
+  for file in "$THEME_DIR/modules"/*; do
+    trace "Loading module $file"
+    source "$file"
+  done
+}
+
+select_theme() {
+  local config
+  if [[ "$THEME" == "" ]]; then
+    THEME=$(list_themes | fzf -1)
+  fi
+
+  # Store the last selected theme so that it can be reloaded
+  echo "$THEME" > "$THEME_SEL_CACHE"
+
+  config=$(jq ".themes[\"$THEME\"]" <<< "$THEME_JSON")
+  if [[ "$config" == "null" ]]; then
+    die "Cannot find theme '$THEME'. Valid options:\n$(thmr list)"
+  fi
+  load_colors "$config"
+  for module in $(jq -r 'keys[]' <<< "$config"); do
+    module_config=$(jq -r -c ".[\"$module\"]" <<< "$config")
+    trace "Invoking module: $module $module_config"
+    "run_$module" "$module_config"
+  done
+}
+
+list_themes() {
+  jq -r '.themes | keys[]' <<< "$THEME_JSON"
+}
+
+get_random_theme() {
+  local themes
+  themes=$(list_themes)
+  themes_len=$(list_themes | wc -l)
+  theme_idx=$((RANDOM % themes_len + 1))
+  sed -n "$theme_idx"p <<< "$themes"
+}
+
+reload_theme() {
+  if [ -e "$THEME_SEL_CACHE" ]; then
+    THEME="$(<"$THEME_SEL_CACHE")"
+  else
+    # Get a random theme if there hasn't been a previously selected one
+    THEME=$(get_random_theme)
+  fi
+  select_theme
+}
+
+random_theme() {
+  THEME=$(get_random_theme)
+  select_theme
+}
+
+edit_config() {
+  "$EDITOR" "$THEME_FILE"
+}
+
+reload_all() {
+  if pgrep xst >/dev/null; then
+    killall -USR1 xst
+  fi
+}
+
+# Implement main functions here
+
+main() {
+  load_modules
+  case "$COMMAND" in
+    "select")
+      select_theme
+      ;;
+    "list")
+      list_themes
+      ;;
+    "reload")
+      reload_theme
+      ;;
+    "random")
+      random_theme
+      ;;
+    "edit")
+      edit_config
+      ;;
+    *)
+      die
+      ;;
+    esac
+  reload_all
+}
+
+main

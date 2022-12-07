@@ -1,0 +1,87 @@
+
+#
+# Values that can be referenced from other parts of the config
+#
+refs:
+  fonts:
+    iosevka:
+      size: 17
+      fullname: "Iosevka Term"
+      cozette:
+        size: 17
+        fullname: "cozetteVector"
+
+
+themes:
+  lucy:
+    colors: "$THEME_DIR/colors/catppuccin"
+    wallpaper: "$THEME_DIR/walls/lucy.png"
+    xrdb:
+      refs:
+        st.font: "f:iosevka"
+    bspwm:
+      values:
+        window_gap: 64
+        border_width: 7
+        left_monocle_padding: 350
+        right_monocle_padding: 350
+        top_monocle_padding: 128
+        bottom_monocle_padding: 128
+      refs:
+        normal_border_color: "c:0"
+        focused_border_color: "c:9"
+        presel_feedback_color: "c:15"
+    lemon: reload
+    rofi:
+      type: 6
+      style: 10
+    emacs: "catppuccin-frappe"
+    #qutebrowser: todo
+
+  afterlife:
+    colors: "${THEME_DIR}/colors/gruvbox"
+    wallpaper: "${THEME_DIR}/walls/afterlife.png"
+    xrdb:
+      refs:
+        st.font: "f:cozette"
+    bspwm:
+      values:
+        window_gap: 16
+        border_width: 4
+        left_monocle_padding: 256
+        right_monocle_padding: 256
+        top_monocle_padding: 128
+        bottom_monocle_padding: 128
+      refs:
+        normal_border_color: "c:8"
+        focused_border_color: "c:9"
+        presel_feedback_color: "c:15"
+    lemon: reload
+    rofi:
+      type: 7
+      style: 7
+    emacs: "doom-gruvbox"
+
+  nightsnow:
+    colors: "${THEME_DIR}/colors/gray"
+    wallpaper: "${THEME_DIR}/walls/nightsnow.jpg"
+    xrdb:
+      refs:
+        st.font: "f:cozette"
+    bspwm:
+      values:
+        window_gap: 16
+        border_width: 4
+        left_monocle_padding: 256
+        right_monocle_padding: 256
+        top_monocle_padding: 128
+        bottom_monocle_padding: 128
+      refs:
+        normal_border_color: "c:8"
+        focused_border_color: "c:9"
+        presel_feedback_color: "c:15"
+    lemon: reload
+    rofi:
+      type: 7
+      style: 7
+    emacs: "doom-plain-dark"
