@@ -13,6 +13,31 @@ refs:
 
 
 themes:
+  braindance:
+    colors: "$THEME_DIR/colors/catppuccin-latte"
+    wallpaper: "$THEME_DIR/walls/braindance.png"
+    xrdb:
+      refs:
+        st.font: "f:iosevka"
+    bspwm:
+      values:
+        window_gap: 64
+        border_width: 7
+        left_monocle_padding: 350
+        right_monocle_padding: 350
+        top_monocle_padding: 128
+        bottom_monocle_padding: 128
+      refs:
+        normal_border_color: "c:0"
+        focused_border_color: "c:9"
+        presel_feedback_color: "c:15"
+    lemon: reload
+    rofi:
+      type: 6
+      style: 10
+    emacs: "catppuccin-latte"
+    #qutebrowser: todo
+
   lucy:
     colors: "$THEME_DIR/colors/catppuccin"
     wallpaper: "$THEME_DIR/walls/lucy.png"
